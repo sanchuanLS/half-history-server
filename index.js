@@ -1,110 +1,96 @@
-
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const { KeepLiveWS } = require('bilibili-live-ws');
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*", // Allow connections from Vercel
-    methods: ["GET", "POST"]
+{
+  "name": "god-simulator-box",
+  "productName": "HALF HISTORY",
+  "version": "1.0.0",
+  "main": "electron.js",
+  "description": "A cellular automata sandbox game.",
+  "author": "sanchuanLS",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "lucide-react": "^0.300.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.160.0",
+    "peerjs": "^1.5.2",
+    "ws": "^8.16.0",
+    "bilibili-live-ws": "^5.2.0",
+    "socket.io-client": "^4.7.4",
+    "@google/genai": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/three": "^0.160.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0",
+    "typescript": "^5.2.0",
+    "vite": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.sanchuanls.godsim",
+    "productName": "HALF HISTORY",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron.js",
+      "package.json",
+      "icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.png",
+      "category": "public.app-category.simulation-games",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "${productName} Installer",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
   }
-});
-
-const PORT = process.env.PORT || 3001;
-
-// Map socket.id -> Bilibili Connection
-const connections = new Map();
-
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.on('join-room', (roomId) => {
-    // 1. Close existing connection if any
-    if (connections.has(socket.id)) {
-      connections.get(socket.id).close();
-      connections.delete(socket.id);
-    }
-
-    try {
-      const room = parseInt(roomId);
-      if (isNaN(room)) {
-        socket.emit('status', { success: false, message: "Invalid Room ID" });
-        return;
-      }
-
-      console.log(`Socket ${socket.id} joining room ${room}`);
-      
-      // 2. Create Bilibili Connection
-      const live = new KeepLiveWS(room);
-      connections.set(socket.id, live);
-
-      live.on('open', () => {
-        socket.emit('status', { success: true, message: "Connected to Bilibili" });
-        console.log(`Bilibili connected for ${socket.id}`);
-      });
-
-      live.on('live', () => {
-        socket.emit('status', { success: true, message: "Live Started" });
-      });
-
-      live.on('close', () => {
-        socket.emit('status', { success: false, message: "Connection Closed" });
-      });
-
-      live.on('error', (e) => {
-        console.error(`Error for ${socket.id}:`, e);
-        // Don't emit error to client to avoid spam, maybe just reconnect logic handled by lib
-      });
-
-      // 3. Forward Events
-      live.on('danmaku', (data) => {
-        socket.emit('bilibili-event', {
-          type: 'chat',
-          user: data.info[2][1],
-          text: data.info[1]
-        });
-      });
-
-      live.on('gift', (data) => {
-        socket.emit('bilibili-event', {
-          type: 'gift',
-          user: data.data.uname,
-          giftName: data.data.giftName,
-          amount: data.data.num
-        });
-      });
-
-      live.on('guard', (data) => {
-        socket.emit('bilibili-event', {
-          type: 'guard',
-          user: data.data.username,
-          giftName: 'Guard',
-          text: `Became a Guard (Level ${data.data.guard_level})`
-        });
-      });
-
-    } catch (e) {
-      console.error(e);
-      socket.emit('status', { success: false, message: "Server Error: " + e.message });
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-    if (connections.has(socket.id)) {
-      connections.get(socket.id).close();
-      connections.delete(socket.id);
-    }
-  });
-});
-
-app.get('/', (req, res) => {
-  res.send('Half History Relay Server is Running');
-});
-
-server.listen(PORT, () => {
-  console.log(`Relay server listening on port ${PORT}`);
-});
+}
