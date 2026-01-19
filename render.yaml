@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: half-history-relay
+    env: node
+    plan: free
+    # No "root" setting needed because this file is for the repo root
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
